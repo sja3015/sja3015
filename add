@@ -1,0 +1,23 @@
+% 指定Simulink模型的名称
+model_name = 'spi_test';
+
+% 指定要修改的子系统的路径，这里假设子系统嵌套在 'Subsystem' 和 'OBSTACLE_Subsystem' 中
+subsystem_path = [model_name, '/Subsystem/OBSTACLE_Subsystem'];
+
+% 获取子系统的句柄
+subsystem_handle = get_param(subsystem_path, 'Handle');
+
+% 获取子系统内的所有CAN Unpack块的句柄
+can_unpack_blocks = find_system(subsystem_handle, 'BlockType', 'CANUnpack');
+
+% 新的CANdb文件地址
+new_candb_file_path = '新的CANdb文件地址';
+
+% 遍历每个CAN Unpack块并修改CANdb文件地址
+for i = 1:numel(can_unpack_blocks)
+    block_handle = can_unpack_blocks(i);
+    set_param(block_handle, 'DataBaseFileName', new_candb_file_path);
+end
+
+% 保存模型
+save_system(model_name);
