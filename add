@@ -1,23 +1,57 @@
-% 指定Simulink模型的名称
-model_name = 'spi_test';
+% 提供新的CANdb文件地址
+newCANdbFile = 'C:\新的CANdb文件.dbc';
 
-% 指定要修改的子系统的路径，这里假设子系统嵌套在 'Subsystem' 和 'OBSTACLE_Subsystem' 中
-subsystem_path = [model_name, '/Subsystem/OBSTACLE_Subsystem'];
+% 打开Simulink模型
+modelName = 'spi_test';
+open_system(modelName);
 
-% 获取子系统的句柄
-subsystem_handle = get_param(subsystem_path, 'Handle');
+% 查找名为Subsystem的子系统
+subsystemName = 'Subsystem';
+subsystemBlock = find_system(modelName, 'SearchDepth', 1, 'BlockType', 'SubSystem', 'Name', subsystemName);
 
-% 获取子系统内的所有CAN Unpack块的句柄
-can_unpack_blocks = find_system(subsystem_handle, 'BlockType', 'CANUnpack');
+if ~isempty(subsystemBlock)            
+    % 如果找到名为Subsystem的子系统
+    
+    % 查找名为OBSTACLE_Subsystem的子系统
+    obstacleSubsystemName = 'OBSTACLE_Subsystem';
+    obstacleSubsystemBlock = find_system(subsystemBlock{1}, 'SearchDepth', 1, 'BlockType', 'SubSystem', 'Name', obstacleSubsystemName);
 
-% 新的CANdb文件地址
-new_candb_file_path = '新的CANdb文件地址';
-
-% 遍历每个CAN Unpack块并修改CANdb文件地址
-for i = 1:numel(can_unpack_blocks)
-    block_handle = can_unpack_blocks(i);
-    set_param(block_handle, 'DataBaseFileName', new_candb_file_path);
+    if ~isempty(obstacleSubsystemBlock)
+        % 如果找到名为OBSTACLE_Subsystem的子系统
+        
+        % 获取名为DATA_A0到DATA_A19的子系统
+        for i = 0:19
+            dataSubsystemName = ['DATA_A', num2str(i)];
+            dataSubsystemBlock = find_system(obstacleSubsystemBlock{1}, 'SearchDepth', 1, 'BlockType', 'SubSystem', 'Name', dataSubsystemName);
+            
+            if ~isempty(dataSubsystemBlock)
+                % 如果找到名为DATA_A0到DATA_A19的子系统
+                
+                % 获取CAN Unpack模块
+                unpackBlock = find_system(dataSubsystemBlock{1}, 'BlockType', 'CANUnpack');
+                
+                if ~isempty(unpackBlock)
+                    % 如果找到CAN Unpack模块
+                    
+                    % 设置新的CANdb文件地址
+                    set_param(unpackBlock{1}, 'DatabaseFile', newCANdbFile);
+                    
+                    % 显示修改的信息
+                    disp(['已将CAN Unpack模块的CANdb文件地址修改为：', newCANdbFile]);
+                else
+                    disp(['在子系统 ', dataSubsystemName, ' 中未找到CAN Unpack模块']);
+                end
+            else
+                disp(['未找到子系统 ', dataSubsystemName]);
+            end
+        end
+    else
+        disp(['未找到子系统 ', obstacleSubsystemName]);
+    end
+else
+    disp(['未找到子系统 ', subsystemName]);
 end
 
-% 保存模型
-save_system(model_name);
+% 保存模型并关闭
+save_system(modelName);
+close_system(modelName);
